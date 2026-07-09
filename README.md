@@ -5,6 +5,10 @@ holds a vertical stack of (sleeved) cards and a **telescoping cap lid** that sli
 reduced-thickness neck and closes flush. Adjust the deck size, sleeve type and fit with live
 sliders, preview the exact geometry in 3D, and download print-ready STLs.
 
+**Live:** [jonas-jensen.com/deck-box](https://jonas-jensen.com/deck-box) (embedded from this
+repo's GitHub Pages deploy — every push to `main` publishes via `.github/workflows/deploy.yml`,
+and the site proxies the live build; no release step).
+
 ![deck box](docs/screenshot.png)
 
 ## Run it
