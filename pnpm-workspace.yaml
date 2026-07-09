@@ -1,0 +1,14 @@
+allowBuilds:
+  sharp: false # transitive via manifold-3d's gltf tooling; we only use the core wasm, no native build
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vite-plus: latest
+overrides:
+  vite: "catalog:"
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: "*"
+    vitest: "*"

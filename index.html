@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>MTG deck box — 3D-printed parametric builder</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: system-ui, sans-serif;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #app canvas {
+        display: block;
+      }
+      #panel {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        width: 300px;
+        max-height: calc(100vh - 24px);
+        overflow-y: auto;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid #d3d8de;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #38404a;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+      }
+      #panel h1 {
+        font-size: 14px;
+        margin: 0 0 2px;
+      }
+      #panel .sub {
+        color: #7b8794;
+        font-size: 11px;
+        margin: 0 0 10px;
+      }
+      #panel .group {
+        margin: 9px 0;
+        padding-top: 8px;
+        border-top: 1px solid #e6e9ed;
+      }
+      #panel .group:first-of-type {
+        border-top: none;
+        padding-top: 2px;
+      }
+      #panel h2 {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #9aa3ad;
+        margin: 0 0 6px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 78px 48px;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0;
+      }
+      .row label {
+        font-size: 12px;
+      }
+      .row input[type="range"] {
+        width: 100%;
+      }
+      .row input[type="text"] {
+        width: 100%;
+        box-sizing: border-box; /* fit the column exactly (matches <select>, default border-box) */
+        font-size: 12px;
+        padding: 1px 3px;
+        border: 1px solid #ccd2da;
+        border-radius: 4px;
+      }
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 0 2px;
+        font-size: 12px;
+      }
+      .sel {
+        display: grid;
+        grid-template-columns: 1fr 130px;
+        align-items: center;
+        gap: 6px;
+        margin: 6px 0 2px;
+        font-size: 12px;
+      }
+      .sel select {
+        width: 100%;
+        font-size: 12px;
+        padding: 2px 4px;
+        border: 1px solid #ccd2da;
+        border-radius: 4px;
+        background: #fff;
+      }
+      #dims {
+        margin-top: 10px;
+        color: #5a646f;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      #warnings {
+        margin-top: 6px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #9a7b2e;
+        background: #fdf0d2;
+        border: 1px solid #ecd39a;
+        border-radius: 5px;
+        padding: 5px 7px;
+      }
+      #downloadBody {
+        margin-top: 12px;
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: #3f7cac;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #downloadBody:hover {
+        background: #356a94;
+      }
+      #downloadLid {
+        margin-top: 6px;
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #b15f1c;
+        background: #fbeede;
+        border: 1px solid #efcfa8;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #downloadLid:hover {
+        background: #f7e2c9;
+      }
+      #reset {
+        margin-top: 8px;
+        padding: 3px 8px;
+        font-size: 11px;
+        color: #7b8794;
+        background: none;
+        border: 1px solid #ccd2da;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #reset:hover {
+        color: #38404a;
+        border-color: #a9b2bd;
+      }
+      .hint {
+        margin-top: 12px;
+        color: #7b8794;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="panel">
+      <h1>MTG deck box — 3D print</h1>
+      <p class="sub">Parametric two-part deck box · body + telescoping cap lid</p>
+
+      <section class="group">
+        <h2>Cards</h2>
+        <label class="sel"
+          >Deck preset
+          <select id="deckPreset">
+            <option value="">Custom…</option>
+          </select>
+        </label>
+        <label class="sel"
+          >Sleeves
+          <select id="sleevePreset">
+            <option value="">Custom…</option>
+          </select>
+        </label>
+        <div class="rows" data-group="cards"></div>
+      </section>
+
+      <section class="group">
+        <h2>Fit</h2>
+        <div class="rows" data-group="fit"></div>
+      </section>
+
+      <section class="group">
+        <h2>Shell</h2>
+        <div class="rows" data-group="shell"></div>
+        <label class="sel"
+          >Body style
+          <select id="bodyStyle">
+            <option value="solid">Solid</option>
+            <option value="window">Window</option>
+            <option value="slots">Slots</option>
+            <option value="hex">Honeycomb</option>
+          </select>
+        </label>
+        <div class="rows" data-group="opening"></div>
+        <p class="sub" id="bodyHint" style="margin: 6px 0 0"></p>
+      </section>
+
+      <section class="group">
+        <h2>Lid</h2>
+        <label class="sel"
+          >Closure
+          <select id="lidStyle">
+            <option value="friction">Friction fit</option>
+            <option value="snap">Snap fit</option>
+            <option value="magnet">Magnets</option>
+          </select>
+        </label>
+        <div class="rows" data-group="lid"></div>
+        <div class="rows" data-group="snap"></div>
+        <div class="rows" data-group="magnet"></div>
+        <p class="sub" id="closureHint" style="margin: 6px 0 0"></p>
+      </section>
+
+      <section class="group">
+        <h2>Thumb notch</h2>
+        <div class="rows" data-group="notch"></div>
+        <p class="sub" style="margin: 6px 0 0">
+          A rounded dip in the neck's front edge so you can pinch the cards out. It sits under the
+          lid skirt, so the closed box stays seamless.
+        </p>
+      </section>
+
+      <section class="group">
+        <h2>View &amp; output</h2>
+        <label class="sel"
+          >Material
+          <select id="material">
+            <option value="PLA">PLA</option>
+            <option value="PETG">PETG</option>
+            <option value="ABS">ABS</option>
+            <option value="TPU">TPU</option>
+          </select>
+        </label>
+        <label class="toggle"><input id="showCards" type="checkbox" checked /> Show cards</label>
+        <label class="toggle"><input id="showAssembled" type="checkbox" /> Show assembled</label>
+      </section>
+
+      <button id="reset" type="button">Reset to defaults</button>
+      <div id="dims"></div>
+      <div id="warnings" style="display: none"></div>
+      <button id="downloadBody">⬇ Download body STL</button>
+      <button id="downloadLid">⬇ Download lid STL</button>
+      <div class="hint">
+        Drag to orbit · scroll to zoom · right-drag to pan. Both parts export in print orientation
+        (mm, Z-up) — print base-down as shown, no supports needed. The preview and the STLs are
+        built from the same geometry, so the print matches what you see.
+      </div>
+    </div>
+    <script type="module" src="/src/viewer/main.ts"></script>
+  </body>
+</html>
