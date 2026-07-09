@@ -5,6 +5,7 @@ import type { BufferGeometry } from "three";
 import {
   capacity,
   dims,
+  fingerRecess,
   MAGNET_DEPTH_PAD,
   magnetBoss,
   MIN_OPENING_H,
@@ -61,10 +62,12 @@ export function createReadout(els: ReadoutEls): (params: Params) => void {
     const grams = Math.round(volCm3 * (DENSITY[mat] ?? 1.24));
     const metres = volCm3 / FILAMENT_AREA_MM2; // cm^3 -> mm^3 (x1000) -> length (/area, /1000) cancel
 
+    const spare = capacity(params) - params.cardCount; // token headroom, in cards
     els.dimsEl.textContent =
       `Closed box ${d.outerW.toFixed(1)} × ${d.outerD.toFixed(1)} × ${d.assembledH.toFixed(1)} mm · ` +
       `fits ${capacity(params)} × ${params.cardWidth.toFixed(1)}×${params.cardHeight.toFixed(1)} mm cards ` +
-      `(stack ${d.stackD.toFixed(0)} mm) · ≈ ${grams} g · ${metres.toFixed(1)} m ${mat} (both parts, solid)`;
+      `(${spare > 0 ? `deck + ${spare} spare, ` : ""}stack ${d.stackD.toFixed(0)} mm) · ` +
+      `≈ ${grams} g · ${metres.toFixed(1)} m ${mat} (both parts, solid)`;
 
     const warnings: string[] = [];
     if (d.skirt < MIN_SKIRT) {
@@ -98,6 +101,9 @@ export function createReadout(els: ReadoutEls): (params: Params) => void {
       if (region.halfW < MIN_OPENING_HALF_W || region.z1 - region.z0 < MIN_OPENING_H) {
         warnings.push(`No room for a ${params.bodyStyle} opening — the walls stay solid.`);
       }
+    }
+    if (params.recessWidth > 0 && fingerRecess(params) === null) {
+      warnings.push(`No room for side recesses — the narrow faces stay solid.`);
     }
     els.warnEl.replaceChildren(
       ...warnings.map((w) => {

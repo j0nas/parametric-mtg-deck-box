@@ -13,6 +13,7 @@ import { type Mat, type Scope, type Solid, scope } from "./csg.ts";
 import {
   dims,
   type Dims,
+  fingerRecess,
   HEX_R,
   HEX_WALL,
   LID_CEILING,
@@ -40,6 +41,11 @@ const NOTCH_UPRIGHT: Mat = [1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1];
 // Lay an extruded cylinder on its side: the local +Z extrusion becomes world +X (a 90° rotation
 // about Y), so the snap ridge/groove runs across the box's wide faces.
 const ALONG_X: Mat = [0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1];
+
+// Stand a face profile against a NARROW face: local X goes across that face (world Y), local Y
+// becomes height (world Z), and the extrusion runs world +X — push from the −X side through both
+// narrow walls. Right-handed like NOTCH_UPRIGHT, so Manifold transforms it exactly.
+const SIDE_UPRIGHT: Mat = [0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1];
 
 // The snap ridge stands proud of the lip face by lidFit + snapBump: lidFit is eaten by the socket
 // clearance, so snapBump is the true interference the skirt must climb — and the depth of the click.
@@ -151,6 +157,34 @@ function cutOpenings(s: Scope, body: Solid, p: Params, d: Dims): Solid {
   return cutters.length > 0 ? s.sub(body, s.union(cutters)) : body;
 }
 
+// Finger recesses: one teardrop cutout through each narrow wall so you grip the deck's long edges.
+// Each cutter is only wall-deep (not a through-pass — below the cavity floor a through cutter would
+// tunnel the floor slab): it dips RECESS_DIP below the floor and bites ~1 mm past the inner face, so
+// the slab keeps a small ledge there and a fingertip reaches under the bottom card. Same profile as
+// the window, so it's just as self-supporting on these vertical faces.
+function cutFingerRecesses(s: Scope, body: Solid, p: Params, d: Dims): Solid {
+  const recess = fingerRecess(p);
+  if (!recess) return body; // no room — stay solid (the readout says so)
+  const { w, z0, h } = recess;
+  const depth = p.wall + 2;
+  const r = Math.min(3, w / 2 - 0.5);
+  const cutters = [1, -1].map((side) => {
+    const cutter = s.transform(s.extrude(teardropWindow(w, h, r), depth, 24), SIDE_UPRIGHT);
+    return s.move(cutter, side === 1 ? d.outerW / 2 - p.wall - 1 : -d.outerW / 2 - 1, 0, z0);
+  });
+  return s.sub(body, s.union(cutters));
+}
+
+// Push-up hole: a plain hole through the middle of the floor, so a snug deck pops out by pushing a
+// finger up from underneath — zero hardware, and the floor stays a flat printable ring. The
+// diameter is capped so the cards can never sag through.
+function cutPushHole(s: Scope, body: Solid, p: Params, d: Dims): Solid {
+  const dia = Math.min(p.pushHoleD, Math.min(d.innerW, d.innerD) - 4);
+  if (dia < 4) return body;
+  const hole = s.move(s.extrude(circle(dia / 2), p.floor + 2, 32), 0, 0, -1);
+  return s.sub(body, hole);
+}
+
 export function buildBody(p: Params): BufferGeometry {
   const d = dims(p);
   const s = scope();
@@ -210,6 +244,10 @@ export function buildBody(p: Params): BufferGeometry {
 
   // Body style: cut the window / slots / honeycomb through both wide faces.
   if (p.bodyStyle !== "solid") body = cutOpenings(s, body, p, d);
+
+  // Retrieval extras: finger recesses through the narrow faces, push-up hole through the floor.
+  if (p.recessWidth > 0) body = cutFingerRecesses(s, body, p, d);
+  if (p.pushHoleD > 0) body = cutPushHole(s, body, p, d);
 
   // Magnet closure: pockets sunk into the pillar tops at the shoulder plane, open upward —
   // print-friendly, glue-in after printing, and capped by the seated lid pillar when closed.

@@ -7,6 +7,7 @@ import {
   DECK_PRESETS,
   defaults,
   dims,
+  fingerRecess,
   LID_CEILING,
   MAGNET_BOSS_WALL,
   MAGNET_FIT,
@@ -20,11 +21,13 @@ import {
 import { sanitizeParams } from "./viewer/storage.ts";
 
 describe("dims", () => {
-  test("cavity wraps the card stack plus clearances", () => {
+  test("cavity wraps the card stack plus token headroom plus clearances", () => {
     const d = dims(defaults);
     expect(d.stackD).toBeCloseTo(defaults.cardCount * defaults.cardThickness);
     expect(d.innerW).toBeCloseTo(defaults.cardWidth + 2 * defaults.sideClearance);
-    expect(d.innerD).toBeCloseTo(d.stackD + defaults.stackClearance);
+    expect(d.innerD).toBeCloseTo(
+      d.stackD + defaults.extraCards * defaults.cardThickness + defaults.stackClearance,
+    );
     expect(d.innerH).toBeCloseTo(defaults.cardHeight + defaults.headroom);
   });
 
@@ -128,7 +131,7 @@ describe("openingRegion", () => {
 });
 
 describe("capacity", () => {
-  test("round-trips the card count for every deck and sleeve preset", () => {
+  test("round-trips deck + token headroom for every deck and sleeve preset", () => {
     for (const deck of DECK_PRESETS) {
       for (const sleeve of SLEEVE_PRESETS) {
         const p = {
@@ -138,9 +141,30 @@ describe("capacity", () => {
           cardHeight: sleeve.height,
           cardThickness: sleeve.thickness,
         };
-        expect(capacity(p)).toBe(deck.count);
+        expect(capacity(p)).toBe(deck.count + defaults.extraCards);
+        expect(capacity({ ...p, extraCards: 0 })).toBe(deck.count);
       }
     }
+  });
+});
+
+describe("fingerRecess", () => {
+  test("defaults leave room, dip below the cavity floor, and stay under the shoulder ring", () => {
+    const p = { ...defaults, recessWidth: 18 };
+    const recess = fingerRecess(p)!;
+    const d = dims(p);
+    expect(recess).not.toBeNull();
+    expect(recess.w).toBe(18);
+    expect(recess.z0).toBeLessThan(p.floor); // reaches under the bottom card
+    expect(recess.z0).toBeGreaterThan(0); // but never through the bed shell
+    expect(recess.z0 + recess.h).toBeLessThan(d.shoulderZ); // solid ring under the lip stays
+  });
+
+  test("off, or a box with no room, yields null", () => {
+    expect(fingerRecess(defaults)).toBeNull(); // recessWidth 0 = off
+    // A 10-card unsleeved box is too shallow front-to-back for any finger-sized recess.
+    const tiny = { ...defaults, recessWidth: 18, cardCount: 10, extraCards: 0, cardThickness: 0.3 };
+    expect(fingerRecess(tiny)).toBeNull();
   });
 });
 

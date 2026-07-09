@@ -7,7 +7,14 @@ import type { BufferGeometry } from "three";
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 import { initCSG } from "./csg.ts";
 import { buildBody, buildLid } from "./deckbox.ts";
-import { defaults, dims, MAGNET_DEPTH_PAD, magnetBoss, type Params } from "./params.ts";
+import {
+  defaults,
+  dims,
+  fingerRecess,
+  MAGNET_DEPTH_PAD,
+  magnetBoss,
+  type Params,
+} from "./params.ts";
 
 beforeAll(async () => {
   await initCSG(); // Node: the Emscripten loader finds the wasm next to its own module
@@ -162,6 +169,43 @@ describe("body styles", () => {
     // The pillars still reach their full outboard extent — an opening that nicked one would have
     // shaved this maximum back to the plain wall.
     expect(bbox(buildBody(p)).max[1]).toBeCloseTo(d.outerD / 2 + boss.proud, 4);
+  });
+
+  test("finger recesses remove material from the narrow walls without changing the footprint", () => {
+    const p: Params = { ...defaults, recessWidth: 18 };
+    const g = buildBody(p);
+    expect(volume(g)).toBeLessThan(solidVol());
+    const b = bbox(g);
+    expect(b.max[0] - b.min[0]).toBeCloseTo(dims(p).outerW, 4);
+    expect(b.min[2]).toBeCloseTo(0, 4); // the shell under the recess dip survives to the bed
+  });
+
+  test("finger recesses never breach the floor slab under the cavity", () => {
+    // The recess dips below the cavity floor, so a through-cutter would have tunnelled a channel
+    // clean across the slab. Prove the slab's core is intact: the mesh still has its floor face
+    // at the cavity centre (a tunnel would have replaced z=floor with tunnel walls there).
+    const p: Params = { ...defaults, recessWidth: 18 };
+    const body = buildBody(p);
+    const recess = fingerRecess(p)!;
+    expect(recess.z0).toBeLessThan(p.floor);
+    // Slice through the slab at the recess's low z, across the box's mid-plane: every surviving
+    // vertex at that height must sit near the walls, never in the central card region.
+    const pos = body.getAttribute("position");
+    const d = dims(p);
+    for (let i = 0; i < pos.count; i++) {
+      const z = pos.getZ(i);
+      if (z < recess.z0 - 1e-4 || z > p.floor - 1e-4) continue;
+      expect(Math.abs(pos.getX(i))).toBeGreaterThan(d.innerW / 2 - 1.5);
+    }
+  });
+
+  test("the push-up hole removes exactly one floor-deep cylinder", () => {
+    const p: Params = { ...defaults, pushHoleD: 20 };
+    const removed = solidVol() - volume(buildBody(p));
+    // The cutter is a 32-gon, so its area is a hair under the true circle's.
+    const circleVol = Math.PI * 10 * 10 * p.floor;
+    expect(removed).toBeGreaterThan(0.98 * circleVol);
+    expect(removed).toBeLessThan(1.0 * circleVol);
   });
 
   test("a box with no room for an opening quietly stays solid", () => {

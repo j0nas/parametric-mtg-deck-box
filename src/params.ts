@@ -16,7 +16,8 @@ export const BODY_STYLES = ["solid", "window", "slots", "hex"] as const;
 export type BodyStyle = (typeof BODY_STYLES)[number];
 
 export type Params = {
-  cardCount: number; // how many cards the box holds
+  cardCount: number; // how many cards the deck itself has
+  extraCards: number; // token headroom: spare capacity beyond the deck, in cards' worth of depth
   cardWidth: number; // sleeved card width (X)
   cardHeight: number; // sleeved card height (Z)
   cardThickness: number; // per-card thickness including its sleeve(s) — sets the stack depth
@@ -38,6 +39,8 @@ export type Params = {
   magnetHeight: number; // magnet only: disc magnet height (pockets add MAGNET_DEPTH_PAD)
   bodyStyle: BodyStyle; // wall look: solid / window / slots / honeycomb
   openingScale: number; // window/slots/hex only: opening size as a fraction of the available face
+  recessWidth: number; // finger recesses through the narrow faces for gripping the deck (0 = none)
+  pushHoleD: number; // push-up hole through the floor for ejecting a snug stack (0 = none)
 };
 
 // Vertical slack between the lip top and the lid's interior ceiling, so the lid always seats on the
@@ -82,6 +85,13 @@ export const HEX_WALL = 3; // web left between cells
 export const MIN_OPENING_HALF_W = 8;
 export const MIN_OPENING_H = 12;
 
+// Finger recesses: a teardrop cutout through each narrow face so you grip the deck by its long
+// edges (the retrieval trick players praise on commercial boxes). The recess dips below the cavity
+// floor, so a fingertip reaches under the bottom card even when the stack sits flush.
+export const RECESS_DIP = 2; // how far the recess reaches below the cavity floor
+export const RECESS_MIN_SHELL = 0.8; // material always left between the recess and the bed
+export const MIN_RECESS_W = 6; // narrower than this isn't a finger
+
 // Sleeved-card sizes (mm). Per-card thickness is the number that actually sizes the box, and it
 // varies by brand — these are middle-of-the-road values; fine-tune with the sliders for your sleeves.
 export type SleevePreset = { name: string; width: number; height: number; thickness: number };
@@ -105,6 +115,7 @@ export const DECK_PRESETS: DeckPreset[] = [
 
 export const defaults: Params = {
   cardCount: 100, // Commander deck by default
+  extraCards: 10, // room for the tokens that ride along — "100+" should really mean 100+
   cardWidth: 66.5, // standard sleeves by default
   cardHeight: 92,
   cardThickness: 0.6,
@@ -126,6 +137,8 @@ export const defaults: Params = {
   magnetHeight: 2,
   bodyStyle: "solid",
   openingScale: 0.65,
+  recessWidth: 0,
+  pushHoleD: 0,
 };
 
 // Sleeves have square corners, so the cavity corners must stay tighter than the card corner radius
@@ -154,7 +167,7 @@ export type Dims = {
 export function dims(p: Params): Dims {
   const stackD = p.cardCount * p.cardThickness;
   const innerW = p.cardWidth + 2 * p.sideClearance;
-  const innerD = stackD + p.stackClearance;
+  const innerD = stackD + p.extraCards * p.cardThickness + p.stackClearance;
   const innerH = p.cardHeight + p.headroom;
   const outerW = innerW + 2 * p.wall;
   const outerD = innerD + 2 * p.wall;
@@ -227,4 +240,17 @@ export function openingRegion(p: Params): { halfW: number; z0: number; z1: numbe
     halfW = Math.min(halfW, boss.x - boss.r - 2.5);
   }
   return { halfW, z0: p.floor + OPENING_BOTTOM_MARGIN, z1: d.shoulderZ - OPENING_TOP_MARGIN };
+}
+
+// Finger recesses: the actual cutout size on the narrow faces, or null when there's no room (then
+// the walls stay solid and the readout says so). Width is capped so a solid pillar remains beside
+// each corner and so the teardrop arch (rise = w/√2) always fits under the shoulder ring.
+export function fingerRecess(p: Params): { w: number; z0: number; h: number } | null {
+  if (p.recessWidth <= 0) return null;
+  const d = dims(p);
+  const z0 = Math.max(p.floor - RECESS_DIP, RECESS_MIN_SHELL);
+  const h = d.shoulderZ - OPENING_TOP_MARGIN - z0;
+  const w = Math.min(p.recessWidth, d.innerD - 8, (h - 5) * Math.SQRT2);
+  if (w < MIN_RECESS_W || h < MIN_OPENING_H) return null;
+  return { w, z0, h };
 }

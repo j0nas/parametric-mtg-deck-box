@@ -111,7 +111,8 @@ const CLOSURE_HINTS: Record<LidStyle, string> = {
     "hard it clicks on and off.",
   magnet:
     "Four glue-in disc magnets, carried in slim pillars on the wide faces so they never touch the " +
-    "neck or the cards. Pockets open at the seam — glue after printing, each pair attracting.",
+    "neck or the cards. Pockets open at the seam — glue after printing, each pair attracting. " +
+    "Ø3×2, Ø4×2 and Ø6×3 are the easy-to-buy disc sizes.",
 };
 function syncLidStyle(): void {
   lidStyleSel.value = params.lidStyle;
@@ -126,8 +127,8 @@ function syncLidStyle(): void {
 const BODY_HINTS: Record<BodyStyle, string> = {
   solid: "Plain walls — the classic closed deck box.",
   window:
-    "A teardrop-arched window through both wide faces shows the cards. The 45° arch prints " +
-    "without supports.",
+    "A teardrop-arched window through both wide faces shows the cards — put your commander at the " +
+    "front of the stack and it doubles as a showcase. The 45° arch prints without supports.",
   slots: "Vertical slots through both wide faces — lighter, faster, still stiff.",
   hex: "A honeycomb of point-up hexes through both wide faces — every edge prints support-free.",
 };

@@ -20,6 +20,7 @@ type Ctrl = {
 const CONTROLS: Ctrl[] = [
   // Cards — what the box holds
   { key: "cardCount", label: "Card count", min: 10, max: 250, step: 1, group: "cards" },
+  { key: "extraCards", label: "Token headroom (cards)", min: 0, max: 40, step: 1, group: "cards" },
   { key: "cardWidth", label: "Card width (sleeved)", min: 60, max: 72, step: 0.1, group: "cards" },
   {
     key: "cardHeight",
@@ -63,7 +64,8 @@ const CONTROLS: Ctrl[] = [
   { key: "magnetHeight", label: "Magnet height", min: 1, max: 4, step: 0.5, group: "magnet" },
   // Body style — shown only when the body has an opening cut into it
   { key: "openingScale", label: "Opening size", min: 0.35, max: 0.9, step: 0.05, group: "opening" },
-  // Thumb notch — capped at the lip height so the closed lid always hides it
+  // Retrieval — thumb notch (capped at the lip height so the closed lid always hides it), side
+  // finger recesses, and the push-up hole in the floor
   { key: "notchWidth", label: "Notch width (0 = off)", min: 0, max: 40, step: 1, group: "notch" },
   {
     key: "notchDepth",
@@ -73,6 +75,22 @@ const CONTROLS: Ctrl[] = [
     step: 0.5,
     group: "notch",
     maxKey: "lipHeight",
+  },
+  {
+    key: "recessWidth",
+    label: "Side recesses (0 = off)",
+    min: 0,
+    max: 30,
+    step: 1,
+    group: "notch",
+  },
+  {
+    key: "pushHoleD",
+    label: "Push-up hole Ø (0 = off)",
+    min: 0,
+    max: 30,
+    step: 1,
+    group: "notch",
   },
 ];
 
