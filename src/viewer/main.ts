@@ -274,6 +274,26 @@ document.getElementById("downloadLid")!.addEventListener("click", () => {
   downloadSTL(lidMesh.geometry, stlName("lid"));
 });
 
+// The whole panel collapses to its title bar so the preview is workable on phones — where it also
+// starts collapsed, since a 300px overlay covers most of a small viewport. (Same behavior as
+// parametric-kit's installPanelCollapse; this app predates the kit and stays dependency-free.)
+{
+  const panel = document.getElementById("panel")!;
+  const header = panel.querySelector("h1")!;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "panel-collapse";
+  header.append(btn);
+  const set = (collapsed: boolean): void => {
+    panel.classList.toggle("collapsed", collapsed);
+    btn.textContent = collapsed ? "▸" : "▾";
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    btn.setAttribute("aria-label", collapsed ? "Show controls" : "Hide controls");
+  };
+  btn.addEventListener("click", () => set(!panel.classList.contains("collapsed")));
+  set(window.matchMedia("(max-width: 640px)").matches);
+}
+
 // Reset to defaults and forget the persisted settings, so a later reload tracks the current defaults
 // rather than a saved snapshot. rebuild(false) rebuilds without re-persisting.
 document.getElementById("reset")!.addEventListener("click", () => {
